@@ -132,3 +132,55 @@ class BinaryServer(object):
             self.loop.call_soon(self._server.close)
             self.loop.run_coro_and_wait(self._server.wait_closed())
         self.loop = None
+
+
+class UnixBinaryServer(object):
+
+    def __init__(self, internal_server, socket_path):
+        self.logger = logging.getLogger(__name__)
+        self.hostname = "localhost"
+        self.port = "62544"
+        self.socket_path = socket_path
+        self.iserver = internal_server
+        self.loop = None
+        self._server = None
+        self._policies = []
+        self.clients = []
+
+    def set_policies(self, policies):
+        self._policies = policies
+
+    def set_loop(self, loop):
+        self.loop = loop
+
+    def start(self):
+        prop = dict(
+                iserver=self.iserver,
+                loop=self.loop,
+                logger=self.logger,
+                policies=self._policies,
+                clients=self.clients
+            )
+        protocol_factory = type('OPCUAProtocol', (OPCUAProtocol,), prop)
+
+        coro = self.loop.create_unix_server(protocol_factory, self.socket_path)
+        self._server = self.loop.run_coro_and_wait(coro)
+        # get the port and the hostname from the created server socket
+        # only relevant for dynamic port asignment (when self.port == 0)
+        # if self.port == 0 and len(self._server.sockets) == 1:
+        #     # will work for AF_INET and AF_INET6 socket names
+        #     # these are to only families supported by the create_server call
+        #     sockname = self._server.sockets[0].getsockname()
+        #     self.hostname = sockname[0]
+        #     self.port = sockname[1]
+        self.logger.warning('Listening unix socket on {0}'.format(self.socket_path))
+
+    def stop(self):
+        self.logger.info("Closing asyncio socket server")
+        for transport in self.iserver.asyncio_transports:
+            transport.close()
+        if self._server:
+            self.loop.call_soon(self._server.close)
+            self.loop.run_coro_and_wait(self._server.wait_closed())
+        self.loop = None
+

@@ -12,7 +12,7 @@ except ImportError:
 
 from opcua import ua
 # from opcua.binary_server import BinaryServer
-from opcua.server.binary_server_asyncio import BinaryServer
+from opcua.server.binary_server_asyncio import BinaryServer, UnixBinaryServer
 from opcua.server.internal_server import InternalServer
 from opcua.server.event_generator import EventGenerator
 from opcua.server.user_manager import UserManager
@@ -80,6 +80,7 @@ class Server(object):
     def __init__(self, shelffile=None, iserver=None):
         self.logger = logging.getLogger(__name__)
         self.endpoint = urlparse("opc.tcp://0.0.0.0:4840/freeopcua/server/")
+        self.socket_path = None
         self._application_uri = "urn:freeopcua:python:server"
         self.product_uri = "urn:freeopcua.github.io:python:server"
         self.name = "FreeOpcUa Python Server"
@@ -189,6 +190,9 @@ class Server(object):
 
     def set_endpoint(self, url):
         self.endpoint = urlparse(url)
+
+    def set_socket_path(self, path):
+        self.socket_path = path
 
     def get_endpoints(self):
         return self.iserver.get_endpoints()
@@ -351,14 +355,17 @@ class Server(object):
         self.iserver.start()
         try:
             if not self.bserver:
-                self.bserver = BinaryServer(self.iserver, self.endpoint.hostname, self.endpoint.port)
+                if self.socket_path:
+                    self.bserver = UnixBinaryServer(self.iserver, self.socket_path)
+                else:
+                    self.bserver = BinaryServer(self.iserver, self.endpoint.hostname, self.endpoint.port)
             self.bserver.set_policies(self._policies)
             self.bserver.set_loop(self.iserver.loop)
             self.bserver.start()
         except Exception as exp:
             self.iserver.stop()
             raise exp
-
+    
     def stop(self):
         """
         Stop server

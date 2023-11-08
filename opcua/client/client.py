@@ -92,7 +92,7 @@ class Client(object):
     if use_crypto is False:
         logging.getLogger(__name__).warning("cryptography is not installed, use of crypto disabled")
 
-    def __init__(self, url, timeout=4):
+    def __init__(self, url, socket_path = None, timeout=4):
         """
 
         :param url: url of the server.
@@ -119,6 +119,7 @@ class Client(object):
         # take initial username and password from the url
         self._username = self.server_url.username
         self._password = self.server_url.password
+        self.socket_path = socket_path
         self.name = "Pure Python Client"
         self.description = self.name
         self.application_uri = "urn:freeopcua:client"
@@ -289,6 +290,8 @@ class Client(object):
             self.disconnect_socket()  # clean up open socket
             raise
 
+    
+
     def disconnect(self):
         """
         High level method
@@ -304,7 +307,10 @@ class Client(object):
         """
         connect to socket defined in url
         """
-        self.uaclient.connect_socket(self.server_url.hostname, self.server_url.port)
+        if self.socket_path:
+            self.uaclient.connect_unix_socket(self.socket_path)
+        else:
+            self.uaclient.connect_socket(self.server_url.hostname, self.server_url.port)
 
     def disconnect_socket(self):
         self.uaclient.disconnect_socket()

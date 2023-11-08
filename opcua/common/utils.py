@@ -149,6 +149,9 @@ class ThreadLoop(threading.Thread):
 
     def create_server(self, proto, hostname, port):
         return self.loop.create_server(proto, hostname, port)
+    
+    def create_unix_server(self, proto, socket_path):
+        return self.loop.create_unix_server(proto, socket_path)
 
     def stop(self):
         """

@@ -160,6 +160,21 @@ class UASocketClient(object):
         self._socket = ua.utils.SocketWrapper(sock)
         self.start()
 
+    def connect_unix_socket(self, socket_path):
+        """
+        connect to server socket and start receiving thread
+        """
+        self.logger.info("opening connection")
+        # Create socket with timeout for initial connection
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.connect(socket_path)
+        # set to blocking mode again
+        sock.settimeout(None)
+        # nodelay necessary to avoid packing in one frame, some servers do not like it
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._socket = ua.utils.SocketWrapper(sock)
+        self.start()
+
     def disconnect_socket(self):
         self.logger.info("Request to close socket received")
         self._do_stop = True
@@ -264,6 +279,13 @@ class UaClient(object):
         """
         self._uasocket = UASocketClient(self._timeout, security_policy=self.security_policy)
         return self._uasocket.connect_socket(host, port)
+    
+    def connect_unix_socket(self, socket_path):
+        """
+        connect to server socket and start receiving thread
+        """
+        self._uasocket = UASocketClient(self._timeout, security_policy=self.security_policy)
+        return self._uasocket.connect_unix_socket(socket_path)
 
     def disconnect_socket(self):
         return self._uasocket.disconnect_socket()
