@@ -352,7 +352,8 @@ class Server(object):
         Start to listen on network
         """
         self._setup_server_nodes()
-        self.iserver.start()
+        if not self.iserver.is_running():
+            self.iserver.start()
         try:
             if not self.bserver:
                 if self.socket_path:
